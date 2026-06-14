@@ -8,14 +8,10 @@
 
 ### 1) 프로젝트 폴더로 이동
 
-```bash
-cd /Users/baeseojin/Downloads/os
-```
-
 ### 2) 필요한 패키지 설치
 
 ```bash
-pip3 install python-dotenv requests scikit-learn psutil
+pip3 install -r requirements.txt
 ```
 
 ### 3) Ollama 설치 및 모델 다운로드
@@ -47,13 +43,17 @@ LLAMA_MODEL=llama3.2:latest
 ### 확인 모드 (시스템 변경 작업 시 y/N으로 물어봄)
 
 ```bash
-python3 main.py
+python3 run.py
+# 또는
+python3 -m src.main
 ```
 
 ### 자동 조치 모드 (안전 작업은 확인 없이 자동 실행)
 
 ```bash
-python3 main.py --auto
+python3 run.py --auto
+# 또는
+python3 -m src.main --auto
 ```
 
 ---
@@ -89,138 +89,28 @@ ModuleNotFoundError: No module named 'requests'
 
 ## 📁 파일 구조 및 내용
 
-### 핵심 파일 (모듈식 버전)
-
-#### `main.py` — 진입점 (메인 프로그램)
-**역할**: CLI 인터페이스 및 사용자 상호작용
-
-**주요 내용**:
-- `read_log()` — 사용자로부터 여러 줄의 오류 로그 입력받기
-- `main()` — 무한 루프에서:
-  1. 로그 입력
-  2. 진단 워크플로우 실행
-  3. 리포트 출력
-  4. 조치 확인 (y/N) 및 실행
-  5. 더 입력할지 여부 대기
-- **특징**: 종료/빈 입력/오류 처리
-
-**크기**: ~90줄
-
----
-
-#### `workflow.py` — 4단계 파이프라인 조정기
-**역할**: 각 단계를 순차 실행하고 상태 전달
-
-**주요 내용**:
-- `DiagnosisWorkflow` 클래스:
-  - `__init__()` — 각 단계 객체 초기화
-  - `classify()` — 1단계 호출 (규칙 분류)
-  - `retrieve_cases()` — 2단계 호출 (유사 사례 검색)
-  - `diagnose()` — 3단계 호출 (모델 진단)
-  - `resolve()` — 4단계 호출 (조치 실행)
-  - `generate_report()` — 리포트 문자열 생성
-  - `run()` — 전체 파이프라인 실행
-- **특징**: 함수형 파이프라인 (상태 변환식)
-
-**크기**: ~150줄
-
----
-
-#### `state.py` — 상태 관리 (데이터 클래스)
-**역할**: 진단 과정의 중간/최종 결과 저장소
-
-**주요 내용**:
-- `DiagnosisState` 데이터클래스:
-  - **입력**: log_text, error_code, system_state
-  - **1단계 결과**: rule_category, rule_keywords
-  - **2단계 결과**: similar_cases
-  - **3단계 결과**: diagnosis (JSON)
-  - **4단계 결과**: resolution (JSON)
-  - **출력**: report (문자열), error (예외)
-- **특징**: 모든 필드가 타입 힌팅됨 (mypy 검사 가능)
-
-**크기**: ~30줄
-
----
-
-#### `crew.py` — 각 단계 구현체 (핵심 로직)
-**역할**: 1, 2, 3단계의 알고리즘 구현
-
-**주요 클래스**:
-
-1. **`RuleClassifier`** (1단계)
-   - `KEYWORDS` — 오류 유형별 키워드 사전 (코드 하드코딩)
-   - `classify()` — 로그 + 오류코드 + 시스템상태로부터 오류 유형 결정
-   - 알고리즘: 키워드 매칭 점수 + 메모리 상태 정보
-
-2. **`CaseRetriever`** (2단계)
-   - `CASE_DB` — 사전 구축된 15+ 문제-해결 사례
-   - `retrieve()` — 로그 검색 + 점수 계산 + 상위 K개 반환
-   - 검색 방식: 로그 서명(signature) 매칭 + 키워드 교집합
-
-3. **`LlamaDiagnoser`** (3단계)
-   - `__init__()` — Ollama 서버 연결 정보 로드 (.env에서)
-   - `_build_messages()` — System + User 프롬프트 구성
-   - `diagnose()` — Llama API 호출 + 함수 호출 응답 파싱
-   - 재시도 로직: 3회 시도 후 포기
-
-**크기**: ~450줄
-
----
-
-#### `resolver.py` — 조치 실행기 (4단계)
-**역할**: 진단 결과(safe_action_id)에 따라 시스템 조치 수행
-
-**주요 클래스/함수**:
-
-1. **`Resolver` 클래스**
-   - `resolve()` — safe_action_id별 핸들러 선택 + 실행
-   - `_reinstall_dependency()` — 패키지 설치 (변경작업, 확인 필요)
-   - `_check_network()` — DNS/포트 연결 테스트 (읽기전용, 자동)
-   - `_check_path()` — 파일 경로 존재 확인 (읽기전용, 자동)
-   - `_free_memory()` — 메모리 상위 프로세스 표시 (읽기전용, 자동)
-   - `_rerun_as_admin()` — 관리자 권한 재실행 가이드 (지침만)
-   - `_unknown()` — 미지원 조치
-
-2. **`render_resolution()` 함수**
-   - resolution 딕셔너리 → 리포트용 문자열 라인 목록 변환
-
-**크기**: ~250줄
-
----
-
-### 추가 파일
-
-#### `mmain.py` — 단일 파일 버전
-**역할**: 모든 로직을 한 파일에 통합 (import 없음)
-
-**특징**:
-- `main.py` + `workflow.py` + `state.py` + `crew.py` + `resolver.py` 내용 모두 포함
-- 독립 실행 가능 (`python3 mmain.py`)
-- 프로토타이핑/테스트용
-- 로직은 `main.py` 버전과 동일
-
-**크기**: ~700줄
-
----
-
-#### `.env` — 환경변수 설정
-**내용**:
-```env
-LLAMA_BASE_URL=http://127.0.0.1:11434/v1
-LLAMA_API_KEY=ollama
-LLAMA_MODEL=llama3.2:latest
 ```
-
-**용도**:
-- Ollama 서버 주소 (기본: localhost:11434)
-- API 인증 (ollama는 키가 없어서 보통 "ollama")
-- 사용할 모델명 (설치된 모델 이름)
-
----
-
-#### `README.md` — 이 파일
-**내용**: 설치 방법 → 실행 방법 → 로직 설명 → 문제 해결
+os/
+├── README.md                    # 이 파일 (전체 문서)
+├── requirements.txt             # Python 패키지 의존성
+├── .gitignore                   # Git 무시 파일
+├── .env.example                 # 환경변수 템플릿
+├── run.py                       # 루트 진입점 (권장)
+│
+├── src/                         # 핵심 모듈 (패키지)
+│   ├── __init__.py
+│   ├── main.py                  # CLI 인터페이스 및 사용자 상호작용
+│   ├── workflow.py              # 4단계 파이프라인 조정기
+│   ├── state.py                 # DiagnosisState 상태 관리
+│   ├── crew.py                  # RuleClassifier, CaseRetriever, LlamaDiagnoser
+│   └── resolver.py              # 조치 실행기 (Resolver)
+│
+├── scripts/                     # 스크립트 및 유틸
+│   └── mmain.py                 # 단일 파일 버전 (독립 실행)
+│
+└── tests/                       # 테스트
+    └── test_types.py
+```
 
 ---
 
@@ -234,16 +124,16 @@ LLAMA_MODEL=llama3.2:latest
 LLAMA_BASE_URL=http://127.0.0.1:11434/v1 \
 LLAMA_MODEL=llama3.2:latest \
 LLAMA_API_KEY=ollama \
-python3 main.py
+python3 run.py
 ```
 
 ### 단일 파일 버전 실행
 
-`mmain.py` 파일은 모든 로직을 한 파일에 담은 버전입니다 (import 없음):
+`scripts/mmain.py` 파일은 모든 로직을 한 파일에 담은 버전입니다 (import 없음):
 
 ```bash
-python3 mmain.py
-python3 mmain.py --auto
+python3 scripts/mmain.py
+python3 scripts/mmain.py --auto
 ```
 
 ### Ollama 서버 미실행 시

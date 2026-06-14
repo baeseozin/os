@@ -1,7 +1,7 @@
 # workflow.py
-from state import DiagnosisState
-from crew import RuleClassifier, CaseRetriever, LlamaDiagnoser
-from resolver import Resolver, render_resolution
+from .state import DiagnosisState
+from .crew import RuleClassifier, CaseRetriever, LlamaDiagnoser
+from .resolver import Resolver, render_resolution
 
 
 class DiagnosisWorkflow:

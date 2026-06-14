@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 # (crew.LlamaDiagnoser 가 LLAMA_BASE_URL 등을 os.environ 에서 읽기 때문)
 load_dotenv()
 
-from workflow import DiagnosisWorkflow
-from resolver import render_resolution
+from .workflow import DiagnosisWorkflow
+from .resolver import render_resolution
 
 SHOW_RAW_RESULTS = False
 
