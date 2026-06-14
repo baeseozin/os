@@ -121,7 +121,7 @@ os/
 `.env` 파일 없이 터미널 명령에 직접 환경변수를 지정할 수도 있습니다:
 
 ```bash
-LLAMA_BASE_URL=http://127.0.0.1:11434/v1 \
+LLAMA_BASE_URL=http://<서버주소>:<포트>/v1 \
 LLAMA_MODEL=llama3.2:latest \
 LLAMA_API_KEY=ollama \
 python3 run.py
