@@ -31,7 +31,7 @@ pip3 install -r requirements.txt
 프로젝트 폴더(`os`) 안에 `.env` 파일을 만들고 다음 내용을 추가하세요:
 
 ```env
-LLAMA_BASE_URL=http://127.0.0.1:11434/v1
+LLAMA_BASE_URL=http://<서버주소>:<포트>/v1
 LLAMA_API_KEY=ollama
 LLAMA_MODEL=llama3.2:latest
 ```
